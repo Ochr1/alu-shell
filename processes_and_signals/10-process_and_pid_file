@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Script that manages a PID file and handles SIGTERM, SIGINT, and SIGQUIT signals
+
+handle_sigterm() {
+    echo "I hate the kill command"
+    rm -f /var/run/myscript.pid
+    exit
+}
+
+handle_sigint() {
+    echo "Y U no love me?"
+}
+
+handle_sigquit() {
+    rm -f /var/run/myscript.pid
+    exit
+}
+
+echo $$ > /var/run/myscript.pid
+
+trap 'handle_sigterm' SIGTERM
+trap 'handle_sigint' SIGINT
+trap 'handle_sigquit' SIGQUIT
+
+while true
+do
+    echo "To infinity and beyond"
+    sleep 2
+done

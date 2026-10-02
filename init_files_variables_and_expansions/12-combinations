@@ -1,0 +1,2 @@
+#!/bin/bash
+echo {a..z}{a..z} | tr ' ' '\n' | cat -v | tr -d '^' | tr -s '\n' | sort | uniq | grep -v "^oo$"

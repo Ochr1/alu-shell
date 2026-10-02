@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Init script that manages the manage_my_process daemon (start, stop, restart)
+
+case "$1" in
+    start)
+        "$(dirname "$0")/manage_my_process" &
+        echo $! > /var/run/my_process.pid
+        echo "manage_my_process started"
+        ;;
+    stop)
+        kill "$(cat /var/run/my_process.pid)"
+        rm -f /var/run/my_process.pid
+        echo "manage_my_process stopped"
+        ;;
+    restart)
+        kill "$(cat /var/run/my_process.pid)"
+        rm -f /var/run/my_process.pid
+        "$(dirname "$0")/manage_my_process" &
+        echo $! > /var/run/my_process.pid
+        echo "manage_my_process restarted"
+        ;;
+    *)
+        echo "Usage: manage_my_process {start|stop|restart}"
+        exit 1
+        ;;
+esac
