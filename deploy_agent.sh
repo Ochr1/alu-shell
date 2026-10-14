@@ -58,3 +58,39 @@ preflight_checks() {
     return 0
 }
 
+update_thresholds() {
+    local config="$1"
+    local answer warn fail
+    read -r -p "Update attendance alert thresholds? (y/N): " answer
+    if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+        echo "[*] Keeping default thresholds."
+        return 0
+    fi
+    while true; do
+        read -r -p "Warning threshold [75]: " warn
+        warn="${warn:-75}"
+        if [[ "$warn" =~ ^[0-9]+$ ]] && [ "$warn" -ge 0 ] && [ "$warn" -le 100 ]; then
+            break
+        fi
+        echo "[x] Enter a number between 0 and 100."
+    done
+    while true; do
+        read -r -p "Failure threshold [50]: " fail
+        fail="${fail:-50}"
+        if [[ "$fail" =~ ^[0-9]+$ ]] && [ "$fail" -ge 0 ] && [ "$fail" -le 100 ]; then
+            if [ "$fail" -lt "$warn" ]; then
+                break
+            fi
+            echo "[x] Failure threshold must be lower than warning ($warn)."
+        else
+            echo "[x] Enter a number between 0 and 100."
+        fi
+    done
+    sed -i.bak -E "s/(\"warning\":[[:space:]]*)[0-9]+/\1$warn/; s/(\"failure\":[[:space:]]*)[0-9]+/\1$fail/" "$config" || {
+        echo "[x] Failed to update config.json"
+        return 1
+    }
+    rm -f "$config.bak"
+    echo "[+] Thresholds updated: warning=$warn, failure=$fail"
+}
+
