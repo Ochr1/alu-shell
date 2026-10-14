@@ -208,3 +208,40 @@ archive_logs() {
     return 0
 }
 
+show_menu() {
+    echo "=============================================="
+    echo "  Student Attendance Tracker - Deploy Agent"
+    echo "=============================================="
+    echo "  1) Deploy the application"
+    echo "  2) Run the application"
+    echo "  3) Archive log files"
+    echo "  4) Exit"
+    echo "=============================================="
+}
+
+usage() {
+    echo "Usage: $0 [--deploy | --run | --archive | --help]"
+    echo "With no arguments, an interactive menu is shown."
+}
+
+case "${1:-}" in
+    --deploy) deploy_project; exit $? ;;
+    --run) run_feature; exit $? ;;
+    --archive) archive_logs; exit $? ;;
+    --help|-h) usage; exit 0 ;;
+    "") ;;
+    *) usage; exit 1 ;;
+esac
+
+while true; do
+    show_menu
+    read -r -p "Select an option [1-4]: " option
+    case "$option" in
+        1) deploy_project ;;
+        2) run_feature ;;
+        3) archive_logs ;;
+        4) echo "Goodbye."; exit 0 ;;
+        *) echo "[x] Invalid option." ;;
+    esac
+    echo
+done
