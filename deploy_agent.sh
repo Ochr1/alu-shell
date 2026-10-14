@@ -160,3 +160,29 @@ deploy_project() {
     run_app "$path"
 }
 
+run_app() {
+    local dir="$1"
+    if [ ! -d "$dir" ]; then
+        echo "[x] Directory $dir does not exist. Deploy first."
+        return 1
+    fi
+    if [ ! -f "$dir/attendance_checker.py" ]; then
+        echo "[x] attendance_checker.py not found in $dir."
+        return 1
+    fi
+    echo "[*] Starting attendance checker in $dir ..."
+    (cd "$dir" && python3 attendance_checker.py)
+    local status=$?
+    if [ "$status" -ne 0 ]; then
+        echo "[x] Application exited with status $status."
+        return "$status"
+    fi
+    echo "[+] Application finished successfully."
+    return 0
+}
+
+run_feature() {
+    ask_project_name || return 1
+    run_app "$BASE_DIR/attendance_tracker_${PROJECT_NAME}"
+}
+
