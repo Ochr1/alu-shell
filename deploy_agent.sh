@@ -186,3 +186,48 @@ run_feature() {
     run_app "$BASE_DIR/attendance_tracker_${PROJECT_NAME}"
 }
 
+archive_logs() {
+    ask_project_name || return 1
+    local dir="$BASE_DIR/attendance_tracker_${PROJECT_NAME}"
+    if [ ! -d "$dir" ]; then
+        echo "[x] Directory $dir does not exist."
+        return 1
+    fi
+
+    local ts
+    ts="$(date +%Y%m%d_%H%M%S)"
+    local archived=0
+
+    mkdir -p "$dir/archives/attendance" "$dir/archives/absent" || {
+        echo "[x] Could not create archive directories."
+        return 1
+    }
+
+    if [ -f "$dir/reports/attendance.log" ]; then
+        local dest="$dir/archives/attendance/attendance_${ts}.log"
+        if mv "$dir/reports/attendance.log" "$dest"; then
+            echo "[+] Archived attendance.log -> $dest"
+            archived=$((archived + 1))
+        else
+            echo "[x] Failed to archive attendance.log"
+        fi
+    else
+        echo "[!] reports/attendance.log not found. Skipping."
+    fi
+
+    if [ -f "$dir/reports/absent.log" ]; then
+        local dest="$dir/archives/absent/absent_${ts}.log"
+        if mv "$dir/reports/absent.log" "$dest"; then
+            echo "[+] Archived absent.log -> $dest"
+            archived=$((archived + 1))
+        else
+            echo "[x] Failed to archive absent.log"
+        fi
+    else
+        echo "[!] reports/absent.log not found (nobody absent?). Skipping."
+    fi
+
+    echo "[*] Archive complete: $archived log(s) archived."
+    return 0
+}
+
