@@ -71,3 +71,69 @@ update_thresholds() {
     echo "[+] Thresholds updated: warning=$warn, failure=$fail"
 }
 
+deploy_project() {
+    preflight_checks || return 1
+
+    trap handle_interrupt INT TSTP
+
+    ask_project_name || { trap - INT TSTP; return 1; }
+    local dir="attendance_tracker_${PROJECT_NAME}"
+    local path="$BASE_DIR/$dir"
+
+    if [ -e "$path" ]; then
+        local answer
+        read -r -p "Directory $dir already exists. Overwrite? (y/N): " answer
+        if [[ "$answer" =~ ^[Yy]$ ]]; then
+            rm -rf "${path:?}" || { echo "[x] Could not remove $dir."; trap - INT TSTP; return 1; }
+        else
+            echo "[x] Aborting: $dir already exists."
+            trap - INT TSTP
+            return 1
+        fi
+    fi
+
+    PROJECT_DIR="$dir"
+
+    echo "[*] Creating directory structure..."
+    if ! mkdir -p "$path/Helpers" "$path/reports"; then
+        echo "[x] Failed to create directories (permission denied?)."
+        rm -rf "${path:?}"
+        PROJECT_DIR=""
+        trap - INT TSTP
+        return 1
+    fi
+
+    cp "$TEMPLATE_DIR/attendance_checker.py" "$path/attendance_checker.py" || { echo "[x] Failed to copy attendance_checker.py"; rm -rf "${path:?}"; PROJECT_DIR=""; trap - INT TSTP; return 1; }
+    cp "$TEMPLATE_DIR/config.json" "$path/Helpers/config.json" || { echo "[x] Failed to copy config.json"; rm -rf "${path:?}"; PROJECT_DIR=""; trap - INT TSTP; return 1; }
+
+    local choice
+    while true; do
+        echo "Roster options:"
+        echo "  A) Copy from template"
+        echo "  B) Generate fresh roster"
+        read -r -p "Choose A or B: " choice
+        case "$choice" in
+            [Aa]) build_roster_copy "$path/Helpers/assets.csv" && break ;;
+            [Bb]) build_roster_generate "$path/Helpers/assets.csv" && break ;;
+            *) echo "[x] Invalid choice." ;;
+        esac
+    done
+
+    sed -i.bak -E "s/(\"total_sessions\":[[:space:]]*)[0-9]+/\1$SESSIONS/" "$path/Helpers/config.json" && rm -f "$path/Helpers/config.json.bak"
+    echo "[+] total_sessions set to $SESSIONS to match the roster."
+
+    update_thresholds "$path/Helpers/config.json" || echo "[!] Continuing with existing thresholds."
+
+    chmod +x "$path/attendance_checker.py"
+    chmod 600 "$path/Helpers/config.json"
+    echo "[+] Permissions set:"
+    ls -l "$path/attendance_checker.py" "$path/Helpers/config.json"
+
+    trap - INT TSTP
+    PROJECT_DIR=""
+
+    echo "[+] Deployment complete: $dir"
+    echo "[*] Verifying deployment by running the application..."
+    run_app "$path"
+}
+
